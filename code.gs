@@ -62,6 +62,7 @@ function doGet(e) {
     const template = HtmlService.createTemplateFromFile('module_inventory_edit');
     template.moduleDetails = moduleDetails;
     template.inventoryData = inventoryData;
+    template.baseUrl = ScriptApp.getService().getUrl(); 
     
     return template.evaluate()
                    .setTitle("Modifier l'inventaire du module " + moduleDetails.Nom)
@@ -525,4 +526,47 @@ function updateSingleInventoryItem(formData) {
   sheet.getRange(rowNumber, 1, 1, headers.length).setValues([currentData]);
   return mapSheetData(sheet);
 }
+/**
+ * Supprime un élément d'inventaire.
+ */
+function deleteInventoryItem(formData) {
+  const moduleCode = formData.moduleCode;
+  const rowNumber = parseInt(formData.row, 10);
+  if (!moduleCode || isNaN(rowNumber) || rowNumber < 2) {
+    throw new Error("Données incomplètes ou numéro de ligne invalide pour suppression.");
+  }
+  const ss = SpreadsheetApp.openById(INVENTORY_SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(moduleCode);
+  if (!sheet) {
+    throw new Error(`Feuille introuvable pour le module ${moduleCode}`);
+  }
+  sheet.deleteRow(rowNumber);
+  return mapSheetData(sheet);
+}
+
+/**
+ * Ajoute un nouvel élément à l'inventaire d'un module.
+ */
+function addInventoryItem(formData) {
+  const moduleCode = formData.moduleCode;
+  const contenant = formData.contenant;
+  const designation = formData.designation;
+  const qteModule = formData.qteModule;
+  
+  if (!moduleCode || !contenant || !designation || !qteModule) {
+    throw new Error("Veuillez remplir tous les champs pour l'ajout d'un nouvel élément.");
+  }
+  
+  const ss = SpreadsheetApp.openById(INVENTORY_SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(moduleCode);
+  if (!sheet) {
+    throw new Error(`Feuille pour le module ${moduleCode} introuvable.`);
+  }
+  
+  // On ajoute une nouvelle ligne en supposant que les colonnes de la feuille sont dans l'ordre :
+  // Contenant | Désignation | Qté modules | Qté départ | Qté retour
+  sheet.appendRow([contenant, designation, qteModule, "", ""]);
+  return mapSheetData(sheet);
+}
+
 
