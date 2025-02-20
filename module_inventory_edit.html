@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Modifier l'inventaire du module <?= moduleDetails.Nom ?></title>
+  <style>
+    /* Mise en forme de base */
+    table {
+      width: 90%;
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    thead {
+      background-color: #f0f0f0;
+    }
+    /* Icône de modification */
+    .icon-pen {
+      cursor: pointer;
+      font-size: 1.2em;
+      color: #0056b3;
+    }
+    .icon-pen:hover {
+      color: #003f8f;
+    }
+    /* Style du modal */
+    .modal {
+      display: none;
+      position: fixed; 
+      z-index: 999; 
+      left: 0; 
+      top: 0; 
+      width: 100%; 
+      height: 100%; 
+      overflow: auto; 
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto; 
+      padding: 20px;
+      border-radius: 8px;
+      width: 400px;
+      max-width: 95%;
+      position: relative;
+    }
+    .close {
+      position: absolute;
+      right: 15px;
+      top: 10px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+    }
+    .close:hover {
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    .btn {
+      padding: 8px 15px;
+      background: #0056b3;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #004494;
+    }
+  </style>
+</head>
+<body>
+
+  <h1 style="text-align:center;">Inventaire du module : <?= moduleDetails.Nom ?></h1>
+
+  <!-- Tableau listant les éléments de l'inventaire -->
+  <table>
+    <thead>
+      <tr>
+        <th>Modifier</th>
+        <th>Nom</th>
+        <th>Quantité</th>
+        <!-- Ajoute les colonnes dont tu as besoin : référence, sous-module, etc. -->
+      </tr>
+    </thead>
+    <tbody>
+      <? if (inventoryData && inventoryData.length > 0) { 
+           for (var i = 0; i < inventoryData.length; i++) {
+             var item = inventoryData[i]; ?>
+        <tr>
+          <!-- Icône “modifier” qui ouvre la modale -->
+          <td>
+            <span class="icon-pen" onclick='openEditModal(<?= JSON.stringify(item) ?>)'>🔸</span>
+          </td>
+          <td><?= item["Nom"] || '' ?></td>
+          <td><?= item["Quantité"] || '' ?></td>
+        </tr>
+      <? } } else { ?>
+        <tr>
+          <td colspan="3">Aucun élément dans l'inventaire.</td>
+        </tr>
+      <? } ?>
+    </tbody>
+  </table>
+
+  <!-- Fenêtre modale pour éditer un élément -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeEditModal()">&times;</span>
+      <h2>Modifier l'élément</h2>
+      <form id="editItemForm">
+        <!-- Champ caché pour stocker la ligne ou l'ID de l'élément -->
+        <input type="hidden" id="editRow" name="__row" />
+        
+        <div class="form-group">
+          <label for="editNom">Nom :</label>
+          <input type="text" id="editNom" name="nom" />
+        </div>
+        <div class="form-group">
+          <label for="editQuantite">Quantité :</label>
+          <input type="number" id="editQuantite" name="quantite" />
+        </div>
+        
+        <button type="button" class="btn" onclick="submitEditItem()">Enregistrer</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * Ouvre la modale d'édition, en préremplissant les champs
+     * avec les données de l'item cliqué.
+     */
+    function openEditModal(item) {
+      // Par exemple, si ta feuille a une colonne __row ou un ID unique
+      document.getElementById('editRow').value = item.__row || '';
+      document.getElementById('editNom').value = item.Nom || '';
+      document.getElementById('editQuantite').value = item.Quantité || '';
+      
+      document.getElementById('editModal').style.display = 'block';
+    }
+
+    /**
+     * Ferme la modale
+     */
+    function closeEditModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    /**
+     * Soumet les modifications au serveur
+     */
+    function submitEditItem() {
+      const form = document.getElementById('editItemForm');
+      const formData = {
+        moduleCode: "<?= moduleDetails.Code ?>",  // on récupère le code du module depuis la variable injectée
+        row: form.__row.value,
+        nom: form.nom.value.trim(),
+        quantite: form.quantite.value.trim()
+      };
+      
+      // Appel côté serveur
+      google.script.run
+        .withSuccessHandler(updatedInventory => {
+          alert("Élément mis à jour avec succès !");
+          // On peut recharger la page pour voir la liste mise à jour,
+          // ou reconstruire le tableau dynamiquement
+          location.reload();
+        })
+        .withFailureHandler(err => {
+          alert("Erreur lors de la mise à jour : " + err.message);
+        })
+        .updateSingleInventoryItem(formData);
+
+      // On ferme la modale (optionnel)
+      closeEditModal();
+    }
+  </script>
+</body>
+</html>
