@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventaire du module <?= moduleDetails.Nom ?></title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #0056b3;
+      color: #fff;
+    }
+    .container-section {
+      margin-top: 40px;
+    }
+    .no-print {
+      text-align: center;
+      margin-top: 20px;
+    }
+    @media print {
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Inventaire du module : <?= moduleDetails.Code ?> - <?= moduleDetails.Nom ?></h1>
+
+  <p><strong>Description :</strong> <?= moduleDetails.Description || '' ?></p>
+
+
+  <?
+    // Regrouper les éléments par "Contenant"
+    var groups = {};
+    if (inventoryData) {
+      inventoryData.forEach(function(item) {
+        var group = item["Contenant"] || "Sans contenant";
+        if (!groups[group]) {
+          groups[group] = [];
+        }
+        groups[group].push(item);
+      });
+    }
+  ?>
+
+
+  <? for (var group in groups) { ?>
+  <div class="container-section">
+    <h2><?= group ?></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Désignation</th>
+          <th>Qté.modules</th>
+          <th>Qté.départ</th>
+          <th>Qté.retour</th>
+        </tr>
+      </thead>
+      <tbody>
+        <? groups[group].forEach(function(item) { ?>
+        <tr>
+          <td><?= item["Désignation"] || item["designation"] || '' ?></td>
+          <td><?= item["Qté modules"] || item["Qté. modules"] || '' ?></td>
+          <td><?= item["Qté départ"] || item["Qté. départ"] || '' ?></td>
+          <td><?= item["Qté retour"] || item["Qté. retour"] || '' ?></td>
+        </tr>
+        <? }); ?>
+      </tbody>
+    </table>
+  </div>
+  <? } ?>
+
+
+  <div class="no-print">
+    <button onclick="window.print()">Imprimer</button>
+  </div>
+</body>
+</html>
+
+
+
