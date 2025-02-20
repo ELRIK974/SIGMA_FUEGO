@@ -87,37 +87,50 @@
   </style>
 </head>
 <body>
+  <button style="margin: 20px;" onclick="window.location.href='<?= baseUrl ?>?tab=gestionModules';">
+    ← Retour à la liste des modules
+  </button>
 
   <h1 style="text-align:center;">Inventaire du module : <?= moduleDetails.Nom ?></h1>
+  <div style="text-align:center; margin-bottom:20px;">
+  <button type="button" class="btn" onclick="openAddModal()">Ajouter un élément</button>
+</div>
+
 
   <!-- Tableau listant les éléments de l'inventaire -->
   <table>
     <thead>
-      <tr>
-        <th>Modifier</th>
-        <th>Nom</th>
-        <th>Quantité</th>
-        <!-- Ajoute les colonnes dont tu as besoin : référence, sous-module, etc. -->
-      </tr>
-    </thead>
-    <tbody>
-      <? if (inventoryData && inventoryData.length > 0) { 
-           for (var i = 0; i < inventoryData.length; i++) {
-             var item = inventoryData[i]; ?>
-        <tr>
-          <!-- Icône “modifier” qui ouvre la modale -->
-          <td>
-            <span class="icon-pen" onclick='openEditModal(<?= JSON.stringify(item) ?>)'>🔸</span>
-          </td>
-          <td><?= item["Nom"] || '' ?></td>
-          <td><?= item["Quantité"] || '' ?></td>
-        </tr>
-      <? } } else { ?>
-        <tr>
-          <td colspan="3">Aucun élément dans l'inventaire.</td>
-        </tr>
-      <? } ?>
-    </tbody>
+  <tr>
+    <th>Modifier</th>
+    <th>Contenant</th>
+    <th>Désignation</th>
+    <th>Qté modules</th>
+    <th>Supprimer</th>
+  </tr>
+</thead>
+<tbody>
+  <? if (inventoryData && inventoryData.length > 0) {
+       for (var i = 0; i < inventoryData.length; i++) {
+         var item = inventoryData[i]; ?>
+    <tr>
+      <td>
+        <span onclick='openEditModal(<?= JSON.stringify(item) ?>)'>🔸</span>
+      </td>
+      <td><?= item["Contenant"] || '' ?></td>
+      <td><?= item["Désignation"] || '' ?></td>
+      <td><?= item["Qté modules"] || '' ?></td>
+      <td>
+        <span onclick="confirmDeleteItem(<?= JSON.stringify(item) ?>)">❌</span>
+      </td>
+    </tr>
+  <? } } else { ?>
+    <tr>
+      <td colspan="5">Aucun élément dans l'inventaire.</td>
+    </tr>
+  <? } ?>
+</tbody>
+
+
   </table>
 
   <!-- Fenêtre modale pour éditer un élément -->
@@ -192,6 +205,76 @@
       // On ferme la modale (optionnel)
       closeEditModal();
     }
+    <!-- Fenêtre modale pour ajouter un nouvel élément -->
+<div id="addModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeAddModal()">&times;</span>
+    <h2>Ajouter un nouvel élément</h2>
+    <form id="addItemForm">
+      <div class="form-group">
+        <label for="addContenant">Contenant :</label>
+        <input type="text" id="addContenant" name="contenant" required>
+      </div>
+      <div class="form-group">
+        <label for="addDesignation">Désignation :</label>
+        <input type="text" id="addDesignation" name="designation" required>
+      </div>
+      <div class="form-group">
+        <label for="addQteModule">Qté modules :</label>
+        <input type="number" id="addQteModule" name="qteModule" required>
+      </div>
+      <button type="button" class="btn" onclick="submitAddItem()">Ajouter</button>
+    </form>
+  </div>
+</div>
+// Ouvre la modale d'ajout
+function openAddModal() {
+  document.getElementById('addModal').style.display = 'block';
+}
+function closeAddModal() {
+  document.getElementById('addModal').style.display = 'none';
+}
+
+// Soumet le formulaire d'ajout d'un nouvel élément
+function submitAddItem() {
+  var form = document.getElementById('addItemForm');
+  var formData = {
+    moduleCode: "<?= moduleDetails.Code ?>",  // le code du module injecté depuis Apps Script
+    contenant: form.contenant.value.trim(),
+    designation: form.designation.value.trim(),
+    qteModule: form.qteModule.value.trim()
+  };
+  if(!formData.contenant || !formData.designation || !formData.qteModule) {
+    alert("Veuillez remplir tous les champs.");
+    return;
+  }
+  google.script.run
+    .withSuccessHandler(function(updatedInventory) {
+      alert("Nouvel élément ajouté avec succès.");
+      location.reload();
+    })
+    .withFailureHandler(function(err) {
+      alert("Erreur lors de l'ajout : " + err.message);
+    })
+    .addInventoryItem(formData);
+}
+
+// Fonction de confirmation pour supprimer un élément
+function confirmDeleteItem(item) {
+  if(confirm("Êtes-vous sûr de vouloir supprimer cet élément ?")) {
+    google.script.run
+      .withSuccessHandler(function(updatedInventory) {
+        alert("Élément supprimé avec succès.");
+        location.reload();
+      })
+      .withFailureHandler(function(err) {
+        alert("Erreur lors de la suppression : " + err.message);
+      })
+      .deleteInventoryItem({ moduleCode: "<?= moduleDetails.Code ?>", row: item.__row });
+  }
+}
+
+
   </script>
 </body>
 </html>
