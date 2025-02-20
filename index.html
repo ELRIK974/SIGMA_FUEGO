@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIGMA - Gestion du Matériel</title>
+  <!-- Materialize CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+  <!-- Tablesort -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tablesort/5.2.1/tablesort.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js" defer></script>
+  <script>
+    const BASE_URL = "<?= baseUrl ?>";
+  </script>
+  <style>
+
+    body { font-family: sans-serif; margin: 20px; }
+    h1, h2 { text-align: center; color: #333; }
+    /* Onglets Materialize */
+    .tab-content { padding: 20px; display: none; }
+    .tab-content.active { display: block; }
+    /* Styles des tableaux */
+    table { border-collapse: collapse; width: 80%; margin: 20px auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 5px; overflow: hidden; }
+    thead { background-color: #0056b3; color: #fff; }
+    th, td { border: 1px solid #ddd; padding: 12px 15px; text-align: left; }
+    th { font-weight: bold; text-transform: uppercase; }
+    tbody tr:nth-child(even) { background-color: #f9f9f9; }
+    tbody tr:hover { background-color: #e0e0e0; }
+    /* Barre de recherche */
+    #searchContainer { width: 80%; margin: 0 auto 20px; text-align: center; }
+    #searchInput { width: 300px; padding: 8px; font-size: 16px; }
+    /* Détails */
+    .details-container { max-width: 600px; margin: 20px auto; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); background: #fff; }
+    .back-button { background: #0056b3; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 20px; transition: background-color 0.3s; }
+    .back-button:hover { background-color: #004494; }
+    .detail-item { margin: 10px 0; display: flex; }
+    .detail-label { width: 150px; font-weight: bold; color: #333; }
+    .detail-value { flex: 1; color: #555; }
+    /* Formulaires */
+    .form-container { max-width: 500px; margin: 20px auto; padding: 25px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .form-container h2 { text-align: center; color: #0056b3; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: bold; color: #333; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: #0056b3; outline: none; box-shadow: 0 0 5px rgba(0,86,179,0.3);
+    }
+    .form-actions { text-align: center; margin-top: 20px; }
+    .form-actions button {
+      padding: 10px 25px; margin: 0 5px; border: none; border-radius: 4px; background-color: #0056b3;
+      color: #fff; font-size: 14px; cursor: pointer; transition: background-color 0.3s;
+    }
+    .form-actions button:hover { background-color: #004494; }
+    /* Sous-onglets dans "Matériel" */
+    .sub-tab-bar {
+  background: transparent !important;  /* Ou la couleur de votre choix */
+  background-color: transparent !important;
+       }
+
+    .sub-tab-button { background: inherit; border: none; cursor: pointer; padding: 8px 12px; transition: background-color 0.3s; }
+    .sub-tab-button:hover { background-color: #ddd; }
+    .sub-tab-button.active { background-color: #fff; border-bottom: 2px solid #0056b3; font-weight: bold; }
+    /* Modales */
+    .modal { display: none; }
+  </style>
+</head>
+<body>
+  <!-- Modale d'ajout d'un type d'objet -->
+  <div id="modalForm" class="modal">
+    <div class="modal-content">
+      <h4>Ajouter un type d'objet</h4>
+      <form id="modalFormContent">
+        <div class="form-group">
+          <label for="nomObjetModal">Nom de l'objet :</label>
+          <input type="text" id="nomObjetModal" name="nomObjet" required>
+        </div>
+        <div class="form-group">
+          <label for="categorieModal">Catégorie :</label>
+          <input type="text" id="categorieModal" name="categorie" required>
+        </div>
+        <div class="form-group">
+          <label for="dureeVieModal">Durée de vie :</label>
+          <input type="text" id="dureeVieModal" name="dureeVie" required>
+        </div>
+        <div class="form-group">
+          <label for="prixRefModal">Prix de ref :</label>
+          <input type="number" id="prixRefModal" name="prixRef" required step="0.01">
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat">Annuler</a>
+      <a href="#!" class="waves-effect waves-green btn-flat" onclick="submitModalForm()">Enregistrer</a>
+    </div>
+  </div>
+
+  <!-- Modale d'édition d'un type d'objet -->
+  <div id="modalEditTypeObjet" class="modal">
+    <div class="modal-content">
+      <h4>Modifier le type d'objet</h4>
+      <form id="modalEditTypeObjetForm">
+        <input type="hidden" id="editTypeRow" name="row">
+        <div class="form-group">
+          <label for="editNomObjet">Nom de l'objet :</label>
+          <input type="text" id="editNomObjet" name="nomObjet" required>
+        </div>
+        <div class="form-group">
+          <label for="editCategorie">Catégorie :</label>
+          <input type="text" id="editCategorie" name="categorie" required>
+        </div>
+        <div class="form-group">
+          <label for="editDureeVie">Durée de vie :</label>
+          <input type="text" id="editDureeVie" name="dureeVie" required>
+        </div>
+        <div class="form-group">
+          <label for="editPrixRef">Prix de ref :</label>
+          <input type="number" id="editPrixRef" name="prixRef" required step="0.01">
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <a href="#!" class="modal-close waves-effect waves-green btn-flat">Annuler</a>
+      <a href="#!" class="waves-effect waves-green btn-flat" onclick="submitEditTypeObjet()">Enregistrer</a>
+    </div>
+  </div>
+
+  <!-- Barre d'onglets -->
+  <header>
+    <div class="row"> 
+      <div class="col s12">
+        <ul class="tabs">
+          <li class="tab col s2"><a href="#resume">Résumé</a></li>
+          <li class="tab col s2"><a href="#gestionEmprunts">Gestion des Emprunts</a></li>
+          <li class="tab col s2"><a href="#gestionModules">Gestion des Modules</a></li>
+          <li class="tab col s2"><a href="#materiel">Matériel</a></li>
+          <li class="tab col s2"><a href="#options">Options</a></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenu des onglets -->
+  <main>
+    <!-- Onglet Résumé -->
+    <section id="resume" class="tab-content active">
+      <h1>Alertes Stock</h1>
+      <div id="searchContainer">
+        <input id="searchInput" type="text" placeholder="Tapez un mot-clé..." aria-label="Recherche dans le tableau">
+      </div>
+      <table id="stockTable">
+        <thead>
+          <tr>
+            <th>Matériel concerné</th>
+            <th>Stock actuel</th>
+            <th>Seuil d'alerte</th>
+            <th>Localisation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <? if (stockAlerts.length > 0) { ?>
+            <? stockAlerts.forEach(item => { ?>
+              <tr>
+                <td><?= item["Matériel concerné"] ?></td>
+                <td><?= item["Stock actuel"] ?></td>
+                <td><?= item["Seuil d'alerte"] ?></td>
+                <td><?= item["Localisation"] ?></td>
+              </tr>
+            <? }); ?>
+          <? } else { ?>
+            <tr>
+              <td colspan="4">Aucune alerte stock à afficher</td>
+            </tr>
+          <? } ?>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Onglet Gestion des Emprunts -->
+    <section id="gestionEmprunts" class="tab-content">
+      <h2>Liste des Emprunts</h2>
+      <button type="button" onclick="openTab(event, 'newEmpruntForm')">Nouvel Emprunt</button>
+      <table id="empruntsTable">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Commande</th>
+            <th>Nom manip</th>
+            <th>Lieu</th>
+            <th>Date départ</th>
+            <th>Retour prévu</th>
+            <th>Emprunteur</th>
+            <th>Secteur</th>
+            <th>Etat</th>
+            <th>Supprimer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <? for (var i = 0; i < emprunts.length; i++) {
+               var item = emprunts[i]; ?>
+            <tr>
+              <td>
+                <span class="icon-pen" onclick="showEmpruntDetails('<?= item['Commande'] ?>')">📝</span>
+              </td>
+              <td><?= item.Commande ?></td>
+              <td><?= item['Nom manip'] ?></td>
+              <td><?= item.Lieu ?></td>
+              <td><?= item['Date départ'] ?></td>
+              <td><?= item['Retour prévu'] ?></td>
+              <td><?= item.Emprunteur ?></td>
+              <td><?= item.Secteur ?></td>
+              <td><?= item.Etat ?></td>
+              <td>
+                <span class="icon-delete" style="cursor:pointer; font-size:1.5em;" onclick="confirmDeleteEmprunt('<?= item.Commande ?>')">❌</span>
+              </td>
+            </tr>
+          <? } ?>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Section du Formulaire Nouvel Emprunt -->
+    <section id="newEmpruntForm" class="tab-content">
+      <div class="form-container">
+        <h2>Nouvel Emprunt</h2>
+        <form id="empruntForm">
+          <div class="form-group">
+            <label for="nomManip">Nom de la manip. :</label>
+            <input type="text" id="nomManip" name="nomManip" required>
+          </div>
+          <div class="form-group">
+            <label for="lieu">Lieu de la manip. :</label>
+            <input type="text" id="lieu" name="lieu" required>
+          </div>
+          <div class="form-group">
+            <label for="dateDepart">Date de départ (JJ/MM/AAAA) :</label>
+            <input type="text" id="dateDepart" name="dateDepart" required pattern="\d{2}/\d{2}/\d{4}">
+          </div>
+          <div class="form-group">
+            <label for="retourPrevu">Retour prévu (JJ/MM/AAAA) :</label>
+            <input type="text" id="retourPrevu" name="retourPrevu" required pattern="\d{2}/\d{2}/\d{4}">
+          </div>
+          <div class="form-group">
+            <label for="emprunteur">Emprunteur :</label>
+            <input type="text" id="emprunteur" name="emprunteur" required>
+          </div>
+          <div class="form-group">
+            <label for="secteur">Secteur :</label>
+            <input type="text" id="secteur" name="secteur" required>
+          </div>
+          <div class="form-group">
+            <label for="etat">État :</label>
+            <select id="etat" name="etat" required>
+              <option value="Pas prêt">Pas prêt</option>
+              <option value="Prêt">Prêt</option>
+              <option value="Parti">Parti</option>
+              <option value="Revenu">Revenu</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="notes">Notes :</label>
+            <textarea id="notes" name="notes" rows="4"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="module">Module associé :</label>
+            <select id="module" name="module">
+              <option value="">Aucun</option>
+              <? if (modules && modules.length > 0) { ?>
+                <? modules.forEach(function(mod) { ?>
+                  <option value="<?= mod.Code ?>"><?= mod.Code ?> - <?= mod.Nom ?></option>
+                <? }); ?>
+              <? } ?>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="button" onclick="submitEmpruntForm()">Enregistrer</button>
+            <button type="button" onclick="openTab(event, 'gestionEmprunts')">Annuler</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Onglet Détails de l'emprunt -->
+    <section id="empruntDetails" class="tab-content">
+      <div class="details-container">
+        <button class="back-button" onclick="hideEmpruntDetails()">← Retour à la liste</button>
+        <h2>Détails de l'emprunt</h2>
+        <div id="empruntDetailsView">
+          <div class="detail-item">
+            <span class="detail-label">Nom manip :</span>
+            <span class="detail-value" id="viewNomManip"><?= empruntDetails ? empruntDetails['Nom manip'] : '' ?></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Lieu :</span>
+            <span class="detail-value" id="viewLieu"><?= empruntDetails ? empruntDetails['Lieu'] : '' ?></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Date départ :</span>
+            <span class="detail-value" id="viewDateDepart"><?= empruntDetails ? empruntDetails['Date départ'] : '' ?></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Retour prévu :</span>
+            <span class="detail-value" id="viewRetourPrevu"><?= empruntDetails ? empruntDetails['Retour prévu'] : '' ?></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Emprunteur :</span>
+            <span class="detail-value" id="viewEmprunteur"><?= empruntDetails ? empruntDetails['Emprunteur'] : '' ?></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Secteur :</span>
+            <span class="detail-value" id="viewSecteur"><?= empruntDetails ? empruntDetails['Secteur'] : '' ?></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Etat :</span>
+            <span class="detail-value" id="viewEtat"><?= empruntDetails ? empruntDetails['Etat'] : '' ?></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Notes :</span>
+            <span class="detail-value" id="viewNotes"><?= empruntDetails ? empruntDetails['Notes'] : '' ?></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Module :</span>
+            <span class="detail-value" id="viewModuleEmprunt"><?= empruntDetails ? empruntDetails['Module'] : '' ?></span>
+          </div>
+          <button type="button" onclick="toggleEditMode(true)">Modifier</button>
+        </div>
+        <div id="empruntDetailsEdit" style="display: none;">
+          <form id="editEmpruntForm">
+            <input type="hidden" id="editCommande" name="commande" value="<?= empruntDetails ? empruntDetails['Commande'] : '' ?>">
+            <div class="form-group">
+              <label for="editNomManip">Nom manip :</label>
+              <input type="text" id="editNomManip" name="nomManip" required>
+            </div>
+            <div class="form-group">
+              <label for="editLieu">Lieu :</label>
+              <input type="text" id="editLieu" name="lieu" required>
+            </div>
+            <div class="form-group">
+              <label for="editDateDepart">Date départ (JJ/MM/AAAA) :</label>
+              <input type="text" id="editDateDepart" name="dateDepart" required pattern="\d{2}/\d{2}/\d{4}">
+            </div>
+            <div class="form-group">
+              <label for="editRetourPrevu">Retour prévu (JJ/MM/AAAA) :</label>
+              <input type="text" id="editRetourPrevu" name="retourPrevu" required pattern="\d{2}/\d{2}/\d{4}">
+            </div>
+            <div class="form-group">
+              <label for="editEmprunteur">Emprunteur :</label>
+              <input type="text" id="editEmprunteur" name="emprunteur" required>
+            </div>
+            <div class="form-group">
+              <label for="editSecteur">Secteur :</label>
+              <input type="text" id="editSecteur" name="secteur" required>
+            </div>
+            <div class="form-group">
+              <label for="editEtat">Etat :</label>
+              <select id="editEtat" name="etat" required>
+                <option value="Pas prêt">Pas prêt</option>
+                <option value="Prêt">Prêt</option>
+                <option value="Parti">Parti</option>
+                <option value="Revenu">Revenu</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editNotes">Notes :</label>
+              <textarea id="editNotes" name="notes" rows="4"></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" onclick="submitEditEmprunt()">Enregistrer les modifications</button>
+              <button type="button" onclick="toggleEditMode(false)">Annuler</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Onglet Gestion des Modules -->
+    <section id="gestionModules" class="tab-content">
+      <h2>Gestion des Modules</h2>
+      <div id="modulesSearchContainer" style="text-align: center; margin-bottom: 10px;">
+        <input type="text" id="modulesSearchInput" placeholder="Rechercher un module..." onkeyup="searchModules()" style="width: 300px; padding: 8px; font-size: 16px;">
+      </div>
+      <table id="modulesTable">
+        <thead>
+          <tr>
+            <? if (modules && modules.length > 0) {
+                 for (var key in modules[0]) {
+                   if (key === "Code") { ?>
+                     <th>Modifier</th>
+                     <th><?= key ?></th>
+                   <? } else { ?>
+                     <th><?= key ?></th>
+                   <? }
+                 }
+               } ?>
+            <th>Imprimer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <? if (modules && modules.length > 0) {
+               modules.forEach(function(module) { ?>
+            <tr>
+              <? for (var key in module) { ?>
+                <? if (key === "Code") { ?>
+                  <td>
+                    <span class="icon-pen" onclick="openModuleInventoryEdit('<?= module['Code'] ?>')" title="Modifier l'inventaire">🔸</span>
+                  </td>
+                  <td><?= module[key] ?></td>
+                <? } else { ?>
+                  <td><?= module[key] ?></td>
+                <? } ?>
+              <? } ?>
+              <td>
+                <span class="icon-printer" onclick="openModulePrintView('<?= module['Code'] ?>')" title="Imprimer l'inventaire">🖨️</span>
+              </td>
+            </tr>
+          <? }); } else { ?>
+            <tr>
+              <td colspan="5">Aucun module à afficher</td>
+            </tr>
+          <? } ?>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Onglet Détails du Module -->
+    <section id="moduleDetails" class="tab-content">
+      <div class="details-container">
+        <button class="back-button" onclick="hideModuleDetails()">← Retour à la liste des modules</button>
+        <h2>Détails du module</h2>
+        <div id="moduleDetailsView">
+          <div class="detail-item">
+            <span class="detail-label">ID :</span>
+            <span class="detail-value" id="viewModuleId"><?= moduleDetails ? moduleDetails['ID'] : '' ?></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Nom :</span>
+            <span class="detail-value" id="viewModuleName"><?= moduleDetails ? moduleDetails['Nom'] : '' ?></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Description :</span>
+            <span class="detail-value" id="viewModuleDescription"><?= moduleDetails ? moduleDetails['Description'] : '' ?></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Onglet Matériel -->
+    <section id="materiel" class="tab-content">
+      <h2>Matériel</h2>
+      <nav class="sub-tab-bar">
+        <button class="sub-tab-button active" data-subtab="typesObjetsSub" onclick="openSubTab(event, 'typesObjetsSub')">
+          Types d’objets
+        </button>
+        <button class="sub-tab-button" data-subtab="etatStockSub" onclick="openSubTab(event, 'etatStockSub')">
+          État du stock
+        </button>
+      </nav>
+      <div id="typesObjetsSub" class="sub-tab-content">
+        <h3>Liste des Types d'Objets</h3>
+        <div id="materielSearchContainer" style="text-align: center; margin-bottom: 10px;">
+          <input type="text" id="materielSearchInput" placeholder="Rechercher un objet par nom..." style="width: 300px; padding: 8px; font-size: 16px;">
+        </div>
+        <div style="text-align: center; margin-bottom: 20px;">
+          <button onclick="openModal()">Ajouter un type d'objet</button>
+        </div>
+        <div id="newObjetFormContainer" style="display: none; max-width: 500px; margin: 0 auto 20px; padding: 20px; border: 1px solid #ccc; border-radius: 5px;">
+          <h4>Ajouter un nouveau type d'objet</h4>
+          <form id="newObjetForm">
+            <div class="form-group" style="margin-bottom: 10px;">
+              <label for="nouveauNomObjet" style="display: block; margin-bottom: 5px;">Nom de l'objet :</label>
+              <input type="text" id="nouveauNomObjet" name="nomObjet" required style="width: 100%; padding: 8px;">
+            </div>
+            <div class="form-group" style="margin-bottom: 10px;">
+              <label for="nouvelleCategorie" style="display: block; margin-bottom: 5px;">Catégorie :</label>
+              <input type="text" id="nouvelleCategorie" name="categorie" required style="width: 100%; padding: 8px;">
+            </div>
+            <div class="form-group" style="margin-bottom: 10px;">
+              <label for="nouvelleDureeVie" style="display: block; margin-bottom: 5px;">Durée de vie :</label>
+              <input type="text" id="nouvelleDureeVie" name="dureeVie" required style="width: 100%; padding: 8px;">
+            </div>
+            <div class="form-group" style="margin-bottom: 10px;">
+              <label for="nouveauPrixRef" style="display: block; margin-bottom: 5px;">Prix de ref :</label>
+              <input type="text" id="nouveauPrixRef" name="prixRef" required style="width: 100%; padding: 8px;">
+            </div>
+            <div style="text-align: center; margin-top: 15px;">
+              <button type="button" onclick="submitNewObjetForm()" style="padding: 8px 15px; margin-right: 10px;">Enregistrer</button>
+              <button type="button" onclick="toggleNewObjetForm(false)" style="padding: 8px 15px;">Annuler</button>
+            </div>
+          </form>
+        </div>
+        <table id="materielTable">
+          <thead>
+            <tr>
+              <th>Nom de l'objet</th>
+              <th>Catégorie</th>
+              <th>Durée de vie</th>
+              <th>Prix de ref</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <? if (materielData && materielData.length > 0) {
+                 materielData.forEach(function(item) { ?>
+            <tr>
+              <td><?= item["Nom de l'objet"] || '' ?></td>
+              <td><?= item["Catégorie"] || '' ?></td>
+              <td><?= item["Durée de vie"] || '' ?></td>
+              <td><?= item["Prix de ref"] || '' ?></td>
+              <td>
+                <span class="icon-pen" title="Modifier" style="cursor:pointer;" onclick='openEditTypeObjet(<?= JSON.stringify(item) ?>)'>
+                  🔸
+                </span>
+              </td>
+            </tr>
+            <? }); } else { ?>
+            <tr>
+              <td colspan="5">Aucun type d'objet à afficher</td>
+            </tr>
+            <? } ?>
+          </tbody>
+        </table>
+      </div>
+      <div id="etatStockSub" class="sub-tab-content" style="display: none;">
+        <h3>État du stock</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Matériel concerné</th>
+              <th>Stock actuel</th>
+              <th>Seuil d'alerte</th>
+              <th>Localisation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <? if (stockAlerts && stockAlerts.length > 0) { ?>
+              <? stockAlerts.forEach(function(item) { ?>
+                <tr>
+                  <td><?= item["Matériel concerné"] ?></td>
+                  <td><?= item["Stock actuel"] ?></td>
+                  <td><?= item["Seuil d'alerte"] ?></td>
+                  <td><?= item["Localisation"] ?></td>
+                </tr>
+              <? }); ?>
+            <? } else { ?>
+              <tr>
+                <td colspan="4">Aucune donnée de stock.</td>
+              </tr>
+            <? } ?>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Onglet Options -->
+    <section id="options" class="tab-content">
+      <h2>Options</h2>
+      <p>Contenu de l'onglet "Options" à venir...</p>
+    </section>
+  </main>
+
+  <!-- JavaScript spécifique -->
+  <script defer>
+    window.openTab = (event, tabName) => {
+  // Vérifier si le lien de tab existe dans la barre d'onglets
+  const tabLink = document.querySelector(`.tabs a[href="#${tabName}"]`);
+  if (tabLink) {
+    // Si oui, utiliser Materialize
+    const tabsInstance = M.Tabs.getInstance(document.querySelector('.tabs'));
+    if (tabsInstance) {
+      tabsInstance.select(tabName);
+      history.replaceState(null, null, `?tab=${tabName}`);
+    }
+  } else {
+    // Sinon, gérer manuellement
+    document.querySelectorAll('.tab-content').forEach(section => {
+      section.classList.remove('active');
+      section.style.display = 'none';
+    });
+    const target = document.getElementById(tabName);
+    if (target) {
+      target.classList.add('active');
+      target.style.display = 'block';
+      history.replaceState(null, null, `?tab=${tabName}`);
+    } else {
+      console.error("La section avec l'ID " + tabName + " n'existe pas.");
+    }
+  }
+};
+// Fonctions pour gérer l'édition et l'impression des modules
+  function openModuleInventoryEdit(moduleCode) {
+    window.location.href = BASE_URL + '?edit=1&moduleCode=' + moduleCode;
+  }
+
+  function openModulePrintView(moduleCode) {
+    window.open(BASE_URL + '?print=1&moduleCode=' + moduleCode, '_blank');
+  }
+
+
+    // Gestion des sous-onglets dans "Matériel"
+    window.openSubTab = (event, subTabName) => {
+      document.querySelectorAll('.sub-tab-content').forEach(content => {
+        content.style.display = 'none';
+      });
+      document.getElementById(subTabName).style.display = 'block';
+      document.querySelectorAll('.sub-tab-button').forEach(button => {
+        button.classList.toggle('active', button.getAttribute('data-subtab') === subTabName);
+      });
+    };
+
+    // Initialisation des composants Materialize et Tablesort
+    document.addEventListener('DOMContentLoaded', function() {
+  // Initialisation des modales et des onglets Materialize
+  const modalElems = document.querySelectorAll('.modal');
+  M.Modal.init(modalElems, {
+    opacity: 0.5,
+    inDuration: 300,
+    outDuration: 200
+  });
+
+  const tabsElems = document.querySelectorAll('.tabs');
+  M.Tabs.init(tabsElems, {});
+
+  // Ajout d'un listener sur chaque onglet principal pour masquer les sections de détails
+  document.querySelectorAll('.tabs a').forEach(link => {
+    link.addEventListener('click', function() {
+      // Masquer la section des détails d'emprunt s'il elle est visible
+      const empruntDetails = document.getElementById('empruntDetails');
+      if (empruntDetails) {
+        empruntDetails.style.display = 'none';
+        empruntDetails.classList.remove('active');
+      }
+      // Si vous avez d'autres sections « détail » (ex: formulaire de nouvel emprunt), vous pouvez les masquer aussi
+      const newEmpruntForm = document.getElementById('newEmpruntForm');
+      if (newEmpruntForm) {
+        newEmpruntForm.style.display = 'none';
+        newEmpruntForm.classList.remove('active');
+      }
+    });
+  });
+
+  // Sélection de l'onglet par défaut selon l'URL
+  const params = new URLSearchParams(window.location.search);
+  const tabParam = params.get('tab') || 'resume';
+  const tabsInstance = M.Tabs.getInstance(document.querySelector('.tabs'));
+  if (tabsInstance) {
+    tabsInstance.select(tabParam);
+  }
+
+  // Initialisation de Tablesort pour le tableau des emprunts
+  new Tablesort(document.getElementById('empruntsTable'));
+
+  // Stockage des données globales
+  window.empruntsData = <?!= JSON.stringify(emprunts) ?>;
+  window.modulesData = <?!= JSON.stringify(modules) ?>;
+  window.materielData = <?!= JSON.stringify(materielData) ?>;
+});
+
+
+    // Fonction pour afficher les détails d'un emprunt
+    function showEmpruntDetails(empruntId) {
+      const emprunt = window.empruntsData.find(item => item.Commande.toString() === empruntId.toString());
+      if (!emprunt) {
+        alert("Emprunt non trouvé");
+        return;
+      }
+      document.getElementById("viewNomManip").textContent = emprunt["Nom manip"];
+      // Mise à jour des autres éléments de détail si nécessaire
+      openTab(null, 'empruntDetails');
+    }
+
+    // Mise à jour du tableau des emprunts
+    function updateEmpruntsTable(emprunts) {
+      const tbody = document.querySelector('#empruntsTable tbody');
+      tbody.innerHTML = '';
+      emprunts.forEach(item => {
+        const tr = document.createElement('tr');
+
+        const tdCommande = document.createElement('td');
+        tdCommande.textContent = item.Commande;
+        tr.appendChild(tdCommande);
+
+        const tdNomManip = document.createElement('td');
+        tdNomManip.textContent = item["Nom manip"];
+        tr.appendChild(tdNomManip);
+
+        // Bouton de modification
+        const tdEdit = document.createElement('td');
+        const btnEdit = document.createElement('span');
+        btnEdit.className = 'icon-pen';
+        btnEdit.innerHTML = '🔸';
+        btnEdit.onclick = () => showEmpruntDetails(item.Commande);
+        tdEdit.appendChild(btnEdit);
+        tr.appendChild(tdEdit);
+
+        // Bouton de suppression
+        const tdDelete = document.createElement('td');
+        const btnDelete = document.createElement('span');
+        btnDelete.className = 'icon-delete';
+        btnDelete.style.cursor = 'pointer';
+        btnDelete.style.fontSize = '1.5em';
+        btnDelete.innerHTML = '❌';
+        btnDelete.onclick = () => {
+          if (confirm("Êtes-vous sûr de vouloir supprimer cet emprunt ?")) {
+            google.script.run
+              .withSuccessHandler(updatedEmprunts => updateEmpruntsTable(updatedEmprunts))
+              .withFailureHandler(error => alert("Erreur lors de la suppression de l'emprunt : " + error.message))
+              .deleteEmprunt(item.Commande);
+          }
+        };
+        tdDelete.appendChild(btnDelete);
+        tr.appendChild(tdDelete);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Soumission du formulaire d'ajout d'emprunt
+    function submitEmpruntForm() {
+      const form = document.getElementById('empruntForm');
+      const formData = {
+        nomManip: form.nomManip.value.trim(),
+        lieu: form.lieu.value.trim(),
+        dateDepart: form.dateDepart.value.trim(),
+        retourPrevu: form.retourPrevu.value.trim(),
+        emprunteur: form.emprunteur.value.trim(),
+        secteur: form.secteur.value.trim(),
+        etat: form.etat.value,
+        notes: form.notes.value.trim(),
+        module: form.module ? form.module.value : ''
+      };
+      if (!formData.nomManip || !formData.lieu || !formData.dateDepart ||
+          !formData.retourPrevu || !formData.emprunteur || !formData.secteur) {
+        alert("Veuillez remplir tous les champs obligatoires.");
+        return;
+      }
+      google.script.run
+        .withSuccessHandler(updatedEmprunts => {
+          form.reset();
+          updateEmpruntsTable(updatedEmprunts);
+          openTab(null, 'gestionEmprunts');
+        })
+        .withFailureHandler(error => {
+          alert("Erreur lors de la création de l'emprunt: " + error.message);
+        })
+        .createEmprunt(formData);
+    }
+
+    // Fermeture de la modale d'édition via Materialize
+    function closeEditModal() {
+      const instance = M.Modal.getInstance(document.getElementById('modalEditTypeObjet'));
+      if (instance) instance.close();
+    }
+
+    // Soumission du formulaire de modification d'un type d'objet
+    function submitEditTypeObjet() {
+      const form = document.getElementById("modalEditTypeObjetForm");
+      const formData = {
+        row: form.row.value,
+        nomObjet: form.nomObjet.value.trim(),
+        categorie: form.categorie.value.trim(),
+        dureeVie: form.dureeVie.value.trim(),
+        prixRef: form.prixRef.value.trim()
+      };
+      if (!formData.nomObjet || !formData.categorie || !formData.dureeVie || !formData.prixRef) {
+        alert("Veuillez remplir tous les champs.");
+        return;
+      }
+      google.script.run.withSuccessHandler(updatedMaterielData => {
+        updateMaterielTable(updatedMaterielData);
+        closeEditModal();
+      }).withFailureHandler(error => {
+        alert("Erreur lors de la modification : " + error.message);
+      }).updateTypeObjet(formData);
+    }
+
+    // Mise à jour du tableau du matériel après ajout/modification
+    function updateMaterielTable(materielData) {
+      const tbody = document.querySelector("#materielTable tbody");
+      tbody.innerHTML = "";
+      if (materielData && materielData.length > 0) {
+        materielData.forEach(item => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${item["Nom de l'objet"] || ""}</td>
+            <td>${item["Catégorie"] || ""}</td>
+            <td>${item["Durée de vie"] || ""}</td>
+            <td>${item["Prix de ref"] || ""}</td>
+            <td>
+              <span class="icon-pen" title="Modifier" style="cursor:pointer;" onclick='openEditTypeObjet(${JSON.stringify(item)})'>
+                🔸
+              </span>
+            </td>`;
+          tbody.appendChild(tr);
+        });
+      } else {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="5">Aucun type d'objet à afficher</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+    // Ouvre la modale pour ajouter un nouveau type d'objet
+function openModal() {
+  const modalElem = document.getElementById('modalForm');
+  const modalInstance = M.Modal.getInstance(modalElem);
+  if (modalInstance) {
+    modalInstance.open();
+  } else {
+    console.error("Instance de la modale d'ajout introuvable.");
+  }
+}
+
+// Ouvre la modale pour modifier un type d'objet en pré-remplissant le formulaire
+function openEditTypeObjet(item) {
+  const modalElem = document.getElementById('modalEditTypeObjet');
+  const modalInstance = M.Modal.getInstance(modalElem);
+  if (modalInstance) {
+    // Remplissage du formulaire avec les données de l'objet à modifier
+    document.getElementById('editTypeRow').value = item.__row || '';
+    document.getElementById('editNomObjet').value = item["Nom de l'objet"] || '';
+    document.getElementById('editCategorie').value = item["Catégorie"] || '';
+    document.getElementById('editDureeVie').value = item["Durée de vie"] || '';
+    document.getElementById('editPrixRef').value = item["Prix de ref"] || '';
+    // Met à jour les champs Materialize (si nécessaire)
+    M.updateTextFields();
+    modalInstance.open();
+  } else {
+    console.error("Instance de la modale d'édition introuvable.");
+  }
+}
+
+  </script>
+</body>
+</html>
