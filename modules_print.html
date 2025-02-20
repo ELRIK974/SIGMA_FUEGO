@@ -62,25 +62,32 @@
   <div class="container-section">
     <h2><?= group ?></h2>
     <table>
-      <thead>
-        <tr>
-          <th>Désignation</th>
-          <th>Qté.modules</th>
-          <th>Qté.départ</th>
-          <th>Qté.retour</th>
-        </tr>
-      </thead>
-      <tbody>
-        <? groups[group].forEach(function(item) { ?>
-        <tr>
-          <td><?= item["Désignation"] || item["designation"] || '' ?></td>
-          <td><?= item["Qté modules"] || item["Qté. modules"] || '' ?></td>
-          <td><?= item["Qté départ"] || item["Qté. départ"] || '' ?></td>
-          <td><?= item["Qté retour"] || item["Qté. retour"] || '' ?></td>
-        </tr>
-        <? }); ?>
-      </tbody>
-    </table>
+  <thead>
+    <tr>
+      <th>Désignation</th>
+      <th>Qté modules</th>
+      <th>Qté départ</th>
+      <th>Qté retour</th>
+    </tr>
+  </thead>
+  <tbody>
+    <? 
+      // groups[group] est un tableau d’objets
+      groups[group].forEach(function(item) { 
+    ?>
+      <tr>
+        <!-- item["Désignation"] et item["Qté modules"] viennent de ta feuille -->
+        <td><?= item["Désignation"] || '' ?></td>
+        <td><?= item["Qté modules"] || '' ?></td>
+        
+        <!-- Ici, on n’a rien en base de données, donc on laisse vide -->
+        <td></td>
+        <td></td>
+      </tr>
+    <? }); ?>
+  </tbody>
+</table>
+
   </div>
   <? } ?>
 
